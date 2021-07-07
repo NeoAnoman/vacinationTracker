@@ -1,13 +1,18 @@
 import React from 'react';
 import { Text, View, Button, TextInput, } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-export default function Home() {
+
+export default function Home(props) {
     const [pin,setPin]= React.useState('');
+    const [data,setData]= React.useState('');
     const getData = async () => {
         try {
             const value = await AsyncStorage.getItem('details')
-            if(value !== null) {
+            if (value !== null) {
+                var data = JSON.parse(value)
                 alert(value)
+                setData(data)
             }
             else {
                 alert('Please enter information to check!!!')
@@ -16,28 +21,39 @@ export default function Home() {
             alert(e)
         }
     }
-    const storeData = async (value) => {
-        try {
-            var value = {
-                pin: pin
+    const storeData = async (props) => {
+        if(!pin) {
+                alert('Please enter the pin')
+                return;
             }
-            const jsonValue = JSON.stringify()
-            await AsyncStorage.setItem('details', jsonValue)
-        } catch (e) {
-            alert(e)
+        else {
+            try {
+                var value = {
+                    pin: pin
+                }
+                const jsonValue = JSON.stringify(value)
+                await AsyncStorage.setItem('details', jsonValue)
+                props.navigation.navigate('Display', value)
+            } catch (e) {
+                alert(e)
+            }
         }
     }
-    
+    React.useEffect(() => {
+        getData()
+    }, []); //replecating componentDidMount Behaviou
     return(
-        <View>
+        <View style={{marginTop: 50, alignItems: 'center' }}>
             <Text
                 style={{
-                    textAlign: 'center'
+                    textAlign: 'center',
                 }}
             >
                 Enter Your Pin
             </Text>
-            <TextInput style={{ height: 60, textAlign: 'center',
+            <TextInput style={{ height: 60, 
+                width: '50%',
+                textAlign: 'center',
                 borderColor: 'gray', 
                 borderWidth: 1, fontSize: 20,
                 marginTop: 20,
@@ -56,10 +72,10 @@ export default function Home() {
                             marginRight: 20
                         }}
                     >
-                        <Button style={{marginTop: 20}} title="Submit" />
+                        <Button onPress={()=>storeData(props)} style={{marginTop: 20}} title="Submit" />
                     </View>
                     <View>
-                        <Button  title="Enter By Area" />
+                        <Button title="Enter By Area" />
                     </View>
             </View>
         </View>
