@@ -1,17 +1,86 @@
 import React from 'react';
 import { Text, View, Button, TextInput, } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import DropDownPicker from 'react-native-dropdown-picker';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import * as TaskManager from 'expo-task-manager';
+import * as BackgroundFetch from 'expo-background-fetch';
+
+const BACKGROUND_FETCH_TASK = 'background-fetch';
+
+// 1. Define the task by providing a name and the function that should be executed
+// Note: This needs to be called in the global scope (e.g outside of your React components)
+TaskManager.defineTask(BACKGROUND_FETCH_TASK, async () => {
+  try {
+    const receivedNewData = '// do your background fetch here'
+    return receivedNewData ? BackgroundFetch.Result.NewData : BackgroundFetch.Result.NoData;
+  } 
+  catch (error) {
+    return BackgroundFetch.Result.Failed;
+  }
+});
 
 
 export default function Home(props) {
     const [pin,setPin]= React.useState('');
     const [data,setData]= React.useState('');
+    const [open, setOpen] = React.useState(false);
+    const [value, setValue] = React.useState(null);
+    const [items, setItems] = React.useState([
+        {label: '1 hour', value: 1},
+        {label: '2 hours', value: 2},
+        {label: '3 hours', value: 3},
+        {label: '4 hours', value: 4},
+        {label: '5 hours', value: 5},
+    ]);
+
+
+    const [isRegistered, setIsRegistered] = React.useState<boolean>(false);
+    const [status, setStatus] = React.useState<BackgroundFetch.Status | null>(null);
+
+
+
+    const checkStatusAsync = async () => {
+        const status = await BackgroundFetch.getStatusAsync();
+        const isRegistered = await TaskManager.isTaskRegisteredAsync(BACKGROUND_FETCH_TASK);
+        setStatus(status);
+        setIsRegistered(isRegistered);
+    };
+
+    const toggleFetchTask = async () => {
+        if (isRegistered) {
+        await unregisterBackgroundFetchAsync();
+        } else {
+        await registerBackgroundFetchAsync();
+        }
+
+        checkStatusAsync();
+    };
+
+    // 2. Register the task at some point in your app by providing the same name, and some configuration options for how the background fetch should behave
+    // Note: This does NOT need to be in the global scope and CAN be used in your React components!
+    async function registerBackgroundFetchAsync() {
+    return BackgroundFetch.registerTaskAsync(BACKGROUND_FETCH_TASK, {
+        minimumInterval: 60 * 15, // 15 minutes
+        stopOnTerminate: false, // android only,
+        startOnBoot: true, // android only
+    });
+    }
+
+    // 3. (Optional) Unregister tasks by specifying the task name
+    // This will cancel any future background fetch calls that match the given name
+    // Note: This does NOT need to be in the global scope and CAN be used in your React components!
+    async function unregisterBackgroundFetchAsync() {
+    return BackgroundFetch.unregisterTaskAsync(BACKGROUND_FETCH_TASK);
+    }
+
+
     const getData = async () => {
         try {
             const value = await AsyncStorage.getItem('details')
             if (value !== null) {
                 var data = JSON.parse(value)
-                alert(value)
+                
                 setData(data)
             }
             else {
@@ -21,6 +90,7 @@ export default function Home(props) {
             alert(e)
         }
     }
+
     const storeData = async (props) => {
         if(!pin) {
                 alert('Please enter the pin')
@@ -43,10 +113,11 @@ export default function Home(props) {
         getData()
     }, []); //replecating componentDidMount Behaviou
     return(
-        <View style={{marginTop: 50, alignItems: 'center' }}>
+        <SafeAreaView style={{alignItems: 'center', marginTop: 20}}>
             <Text
                 style={{
                     textAlign: 'center',
+                    fontSize: 20
                 }}
             >
                 Enter Your Pin
@@ -78,6 +149,33 @@ export default function Home(props) {
                         <Button title="Enter By Area" />
                     </View>
             </View>
-        </View>
+            <View
+                style={{
+                    marginTop: 80,
+                    alignItems: 'center'
+                }}
+            >
+                <Text style={{textAlign: 'center', fontSize: 20, marginBottom: 20}} >
+                    OR Set an Interval To check
+                </Text>
+                <DropDownPicker
+                    open={open}
+                    value={value}
+                    items={items}
+                    setOpen={setOpen}
+                    setValue={setValue}
+                    setItems={setItems}
+                    containerStyle= {{width: '50%'}}
+                />
+            </View>
+            <View
+                style={{marginTop: 20}}
+            >
+                <Button
+                    title={isRegistered ? 'Unregister BackgroundFetch task' : 'Register BackgroundFetch task'}
+                    onPress={toggleFetchTask}
+                />
+            </View>
+        </SafeAreaView>
     )
 }
