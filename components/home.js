@@ -8,12 +8,32 @@ import * as BackgroundFetch from 'expo-background-fetch';
 
 const BACKGROUND_FETCH_TASK = 'background-fetch';
 
+
+const getData = async () => {
+        try {
+            const value = await AsyncStorage.getItem('details')
+            if (value !== null) {
+                var data = JSON.parse(value)
+                return data;
+            }
+            else {
+                alert('Please enter information to check!!!')
+            }
+        } catch(e) {
+            alert(e)
+        }
+    }
+
 // 1. Define the task by providing a name and the function that should be executed
 // Note: This needs to be called in the global scope (e.g outside of your React components)
 TaskManager.defineTask(BACKGROUND_FETCH_TASK, async () => {
   try {
-    const receivedNewData = '// do your background fetch here'
-    return receivedNewData ? BackgroundFetch.Result.NewData : BackgroundFetch.Result.NoData;
+      var data  = await getData();
+      if(data.pin) {
+          
+      }
+      const receivedNewData = '// do your background fetch here'
+      return receivedNewData ? BackgroundFetch.Result.NewData : BackgroundFetch.Result.NoData;
   } 
   catch (error) {
     return BackgroundFetch.Result.Failed;
@@ -21,9 +41,9 @@ TaskManager.defineTask(BACKGROUND_FETCH_TASK, async () => {
 });
 
 
+
 export default function Home(props) {
     const [pin,setPin]= React.useState('');
-    const [data,setData]= React.useState('');
     const [open, setOpen] = React.useState(false);
     const [value, setValue] = React.useState(null);
     const [items, setItems] = React.useState([
@@ -35,8 +55,8 @@ export default function Home(props) {
     ]);
 
 
-    const [isRegistered, setIsRegistered] = React.useState<boolean>(false);
-    const [status, setStatus] = React.useState<BackgroundFetch.Status | null>(null);
+    const [isRegistered, setIsRegistered] = React.useState(false);
+    const [status, setStatus] = React.useState(null);
 
 
 
@@ -60,35 +80,19 @@ export default function Home(props) {
     // 2. Register the task at some point in your app by providing the same name, and some configuration options for how the background fetch should behave
     // Note: This does NOT need to be in the global scope and CAN be used in your React components!
     async function registerBackgroundFetchAsync() {
-    return BackgroundFetch.registerTaskAsync(BACKGROUND_FETCH_TASK, {
-        minimumInterval: 60 * 15, // 15 minutes
-        stopOnTerminate: false, // android only,
-        startOnBoot: true, // android only
-    });
+        await storeData();
+        return BackgroundFetch.registerTaskAsync(BACKGROUND_FETCH_TASK, {
+            minimumInterval: 60 * 15, // 15 minutes
+            stopOnTerminate: false, // android only,
+            startOnBoot: true, // android only
+        });
     }
 
     // 3. (Optional) Unregister tasks by specifying the task name
     // This will cancel any future background fetch calls that match the given name
     // Note: This does NOT need to be in the global scope and CAN be used in your React components!
     async function unregisterBackgroundFetchAsync() {
-    return BackgroundFetch.unregisterTaskAsync(BACKGROUND_FETCH_TASK);
-    }
-
-
-    const getData = async () => {
-        try {
-            const value = await AsyncStorage.getItem('details')
-            if (value !== null) {
-                var data = JSON.parse(value)
-                
-                setData(data)
-            }
-            else {
-                alert('Please enter information to check!!!')
-            }
-        } catch(e) {
-            alert(e)
-        }
+        return BackgroundFetch.unregisterTaskAsync(BACKGROUND_FETCH_TASK);
     }
 
     const storeData = async (props) => {
@@ -103,17 +107,21 @@ export default function Home(props) {
                 }
                 const jsonValue = JSON.stringify(value)
                 await AsyncStorage.setItem('details', jsonValue)
-                props.navigation.navigate('Display', value)
             } catch (e) {
                 alert(e)
             }
         }
     }
     React.useEffect(() => {
-        getData()
+        checkStatusAsync();
+        const func = async () => {
+            var data  = await getData();
+            console.log(data)
+        }
+        func();
     }, []); //replecating componentDidMount Behaviou
     return(
-        <SafeAreaView style={{alignItems: 'center', marginTop: 20}}>
+        <View style={{alignItems: 'center', marginTop: 20}}>
             <Text
                 style={{
                     textAlign: 'center',
@@ -143,7 +151,12 @@ export default function Home(props) {
                             marginRight: 20
                         }}
                     >
-                        <Button onPress={()=>storeData(props)} style={{marginTop: 20}} title="Submit" />
+                        <Button onPress={()=>{
+                            var value = {
+                                pin: pin
+                            }
+                            props.navigation.navigate('Display', value)
+                        }} style={{marginTop: 20}} title="Submit" />
                     </View>
                     <View>
                         <Button title="Enter By Area" />
@@ -176,6 +189,6 @@ export default function Home(props) {
                     onPress={toggleFetchTask}
                 />
             </View>
-        </SafeAreaView>
+        </View>
     )
 }
