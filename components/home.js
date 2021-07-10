@@ -23,14 +23,65 @@ const getData = async () => {
             alert(e)
         }
     }
+const getOldData = async () => {
+        try {
+            const value = await AsyncStorage.getItem('oldDetails')
+            if (value !== null) {
+                var data = JSON.parse(value)
+                return data;
+            }
+            else {
+                alert('Please enter information to check!!!')
+            }
+        } catch(e) {
+            alert(e)
+        }
+    }
 
 // 1. Define the task by providing a name and the function that should be executed
 // Note: This needs to be called in the global scope (e.g outside of your React components)
+const storeResults = async (props) => {
+        try {
+            var value = {
+                pin: props.value
+            }
+            console.log(value)
+            const jsonValue = JSON.stringify(value)
+            await AsyncStorage.setItem('oldDetails', jsonValue)
+            return 1;
+        } catch (e) {
+            alert(e)
+            return 0;
+        }
+    }
+
 TaskManager.defineTask(BACKGROUND_FETCH_TASK, async () => {
   try {
+      console.log('background')
       var data  = await getData();
       if(data.pin) {
-          
+            var day = date.getDate()
+            var month = date.getMonth()
+            var year = date.getFullYear()
+            day = day+1
+            month = month+1
+            if((day/10) < 1) {
+                day= '0'+day
+            }
+            if((month/10) < 1) {
+                month= '0'+month
+            }
+            date = day+'-'+month+'-'+year;
+            var api = "https://cdn-api.co-vin.in/api/v2/appointment/sessions/public/findByPin?pincode="+pin+"&date="+date;
+            fetch(api)
+            .then((res)=> res.json())
+            .then(async (data)=> {
+                console.log(data)
+                console.log('background')
+            })
+            .catch((e)=> {
+                console.log(e)
+            })
       }
       const receivedNewData = '// do your background fetch here'
       return receivedNewData ? BackgroundFetch.Result.NewData : BackgroundFetch.Result.NoData;
@@ -80,12 +131,14 @@ export default function Home(props) {
     // 2. Register the task at some point in your app by providing the same name, and some configuration options for how the background fetch should behave
     // Note: This does NOT need to be in the global scope and CAN be used in your React components!
     async function registerBackgroundFetchAsync() {
-        await storeData();
-        return BackgroundFetch.registerTaskAsync(BACKGROUND_FETCH_TASK, {
-            minimumInterval: 60 * 15, // 15 minutes
-            stopOnTerminate: false, // android only,
-            startOnBoot: true, // android only
-        });
+        if(await storeData()) {
+            console.log('I am registering')
+            return BackgroundFetch.registerTaskAsync(BACKGROUND_FETCH_TASK, {
+                minimumInterval: 60 * 15, // 15 minutes after the app is in background
+                stopOnTerminate: false, // android only,
+                startOnBoot: true, // android only
+            });
+        }
     }
 
     // 3. (Optional) Unregister tasks by specifying the task name
@@ -98,7 +151,7 @@ export default function Home(props) {
     const storeData = async (props) => {
         if(!pin) {
                 alert('Please enter the pin')
-                return;
+                return 0;
             }
         else {
             try {
@@ -107,8 +160,10 @@ export default function Home(props) {
                 }
                 const jsonValue = JSON.stringify(value)
                 await AsyncStorage.setItem('details', jsonValue)
+                return 1;
             } catch (e) {
                 alert(e)
+                return 0;
             }
         }
     }
