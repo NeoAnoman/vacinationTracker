@@ -5,6 +5,8 @@ import DropDownPicker from 'react-native-dropdown-picker';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as TaskManager from 'expo-task-manager';
 import * as BackgroundFetch from 'expo-background-fetch';
+import {Picker} from '@react-native-picker/picker';
+
 
 const BACKGROUND_FETCH_TASK = 'background-fetch';
 
@@ -63,8 +65,26 @@ TaskManager.defineTask(BACKGROUND_FETCH_TASK, async () => {
             var day = date.getDate()
             var month = date.getMonth()
             var year = date.getFullYear()
-            day = day+1
-            month = month+1
+            if(day == last.getDate()) {
+                day = 1
+                if(month == 11) {
+                    month = 0
+                    year = year + 1
+                }
+                else {
+                    month = month+1
+                }
+            }
+            else {
+                day = day+1
+            }
+            if(month == 11) {
+                month = 0
+                year = year+1
+            }
+            else {
+                month = month+1
+            }
             if((day/10) < 1) {
                 day= '0'+day
             }
@@ -72,7 +92,12 @@ TaskManager.defineTask(BACKGROUND_FETCH_TASK, async () => {
                 month= '0'+month
             }
             date = day+'-'+month+'-'+year;
-            var api = "https://cdn-api.co-vin.in/api/v2/appointment/sessions/public/findByPin?pincode="+pin+"&date="+date;
+            if(showPin) {
+                var api = "https://cdn-api.co-vin.in/api/v2/appointment/sessions/public/findByPin?pincode="+data.pin+"&date="+date;
+            }
+            else {
+                var api  = "https://cdn-api.co-vin.in/api/v2/appointment/sessions/public/findByDistrict?district_id="+data.district+"&date="+date
+            }
             fetch(api)
             .then((res)=> res.json())
             .then(async (data)=> {
@@ -97,6 +122,7 @@ export default function Home(props) {
     const [pin,setPin]= React.useState('');
     const [open, setOpen] = React.useState(false);
     const [value, setValue] = React.useState(null);
+    const [showPin, setShowPin] = React.useState(true);
     const [items, setItems] = React.useState([
         {label: '1 hour', value: 1},
         {label: '2 hours', value: 2},
@@ -104,6 +130,11 @@ export default function Home(props) {
         {label: '4 hours', value: 4},
         {label: '5 hours', value: 5},
     ]);
+    const [state, setState] = React.useState(null);
+    const [allStates, setAllStates] = React.useState(null);
+
+    const [district, setDistrict] = React.useState(null);
+    const [allDistricts, setAllDistricts] = React.useState(null);
 
 
     const [isRegistered, setIsRegistered] = React.useState(false);
@@ -149,14 +180,15 @@ export default function Home(props) {
     }
 
     const storeData = async (props) => {
-        if(!pin) {
-                alert('Please enter the pin')
+        if(!pin && !district) {
+                alert('Please enter the pin or location')
                 return 0;
             }
         else {
             try {
                 var value = {
-                    pin: pin
+                    pin: pin,
+                    district: district
                 }
                 const jsonValue = JSON.stringify(value)
                 await AsyncStorage.setItem('details', jsonValue)
@@ -167,6 +199,39 @@ export default function Home(props) {
             }
         }
     }
+    
+    const fetchStates = async () => {
+        setAllStates(null)
+        var api = "https://cdn-api.co-vin.in/api/v2/admin/location/states"
+        console.log("start to fetch")
+        fetch(api, {
+            headers: {
+            'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/56.0.2924.87 Safari/537.36',
+            }
+        })
+        .then((res) => res.json())
+        .then((data) => {
+            setAllStates(data)
+        })
+        .catch((err) => {console.log(err)})
+    }
+
+    const fetchDistricts = async (value) => {
+        setAllStates(null)
+        var api = "https://cdn-api.co-vin.in/api/v2/admin/location/districts/"+ value
+        console.log("start to fetch districts")
+        fetch(api, {
+            headers: {
+            'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/56.0.2924.87 Safari/537.36',
+            }
+        })
+        .then((res) => res.json())
+        .then((data) => {
+            setAllDistricts(data)
+        })
+        .catch((err) => {console.log(err)})
+    }
+
     React.useEffect(() => {
         checkStatusAsync();
         const func = async () => {
@@ -177,26 +242,70 @@ export default function Home(props) {
     }, []); //replecating componentDidMount Behaviou
     return(
         <View style={{alignItems: 'center', marginTop: 20}}>
-            <Text
-                style={{
+            {
+            showPin?
+            <View style={{width: '100%', alignItems: 'center'}}>
+                <Text
+                    style={{
+                        textAlign: 'center',
+                        fontSize: 20
+                    }}
+                >
+                    Enter Your Pin
+                </Text>
+                <TextInput style={{ height: 60, 
+                    width: '50%',
                     textAlign: 'center',
-                    fontSize: 20
-                }}
-            >
-                Enter Your Pin
-            </Text>
-            <TextInput style={{ height: 60, 
-                width: '50%',
-                textAlign: 'center',
-                borderColor: 'gray', 
-                borderWidth: 1, fontSize: 20,
-                marginTop: 20,
-                marginBottom: 20,
-                borderColor: 'blue', color: 'blue'}} 
-                variant='outlined' 
-                placeholder='pin' 
-                onChangeText={text=> setPin(text)}
-                />
+                    borderColor: 'gray', 
+                    borderWidth: 1, fontSize: 20,
+                    marginTop: 20,
+                    marginBottom: 20,
+                    borderColor: 'blue', color: 'blue'}} 
+                    variant='outlined' 
+                    placeholder='pin' 
+                    onChangeText={text=> setPin(text)}
+                    />
+            </View>
+            :<View style={{width: '100%', alignItems: 'center'}}>
+                <Text
+                    style={{
+                        textAlign: 'center',
+                        fontSize: 20
+                    }}
+                >
+                    Select your Area
+                </Text>
+                <Picker
+                    style = {{height: 100, width: '50%'}}
+                    selectedValue={state}
+                    onValueChange={(itemValue, itemIndex) => {
+                        if(itemValue != state) {
+                            fetchDistricts(itemValue)
+                        }
+                        setState(itemValue)
+                        setAllStates(allStates)
+                    }
+                    }>
+                    {allStates?allStates.states.map((item) => (
+                        <Picker.Item label={item.state_name} value={item.state_id} key={item.state_id}/>
+                    )):<Picker.Item label="Please wait while Fetching" value="Empty" />}
+                    
+                </Picker>
+                {allDistricts?<Picker
+                    style = {{height: 100, width: '50%'}}
+                    selectedValue={district}
+                    onValueChange={(itemValue, itemIndex) => {
+                        setDistrict(itemValue)
+                        setAllDistricts(allDistricts)
+                    }
+                    }>
+                    {allDistricts.districts.map((item) => (
+                        <Picker.Item label={item.district_name} value={item.district_id} key={item.district_id}/>
+                    ))}
+                    
+                </Picker>:null}
+            </View>
+            }
             <View style={{
                     display: 'flex',
                     flexDirection: 'row'
@@ -206,35 +315,55 @@ export default function Home(props) {
                             marginRight: 20
                         }}
                     >
-                        <Button onPress={()=>{
+                        {showPin?<Button onPress={()=>{
                             var value = {
                                 pin: pin
                             }
                             props.navigation.navigate('Display', value)
+                        }} style={{marginTop: 20}} title="Submit" />:
+                        <Button onPress={()=>{
+                            var value = {
+                                district: district
+                            }
+                            console.log(value)
+                            props.navigation.navigate('Display', value)
                         }} style={{marginTop: 20}} title="Submit" />
+                        }
                     </View>
                     <View>
-                        <Button title="Enter By Area" />
+                        {showPin?<Button onPress= {() => 
+                                {
+                                    setShowPin(!showPin)
+                                    if(allStates == null) {
+                                        fetchStates()
+                                    }
+                            }} title="Enter By Area" />
+                        :<Button onPress= {() => 
+                               {setShowPin(!showPin)}} 
+                            title="Enter By Pin" />}
                     </View>
             </View>
             <View
                 style={{
                     marginTop: 80,
-                    alignItems: 'center'
+                    alignItems: 'center',
+                    width: '100%'
                 }}
             >
                 <Text style={{textAlign: 'center', fontSize: 20, marginBottom: 20}} >
                     OR Set an Interval To check
                 </Text>
-                <DropDownPicker
-                    open={open}
-                    value={value}
-                    items={items}
-                    setOpen={setOpen}
-                    setValue={setValue}
-                    setItems={setItems}
-                    containerStyle= {{width: '50%'}}
-                />
+                <Picker
+                    style = {{height: 60, width: '50%'}}
+                    selectedValue={value}
+                    onValueChange={(itemValue, itemIndex) => {
+                        setValue(itemValue)
+                    }}>
+                    {
+                    items.map((item)=> (
+                        <Picker.Item label={item.label} value={item.value} key={100 +  item.value}/>
+                    ))}
+                </Picker>
             </View>
             <View
                 style={{marginTop: 20}}

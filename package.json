@@ -25,7 +25,8 @@
     "react-native-table-component": "^1.2.1",
     "react-native-web": "^0.17.1",
     "expo-task-manager": "~9.2.2",
-    "expo-background-fetch": "~9.2.2"
+    "expo-background-fetch": "~9.2.2",
+    "@react-native-picker/picker": "1.16.1"
   },
   "devDependencies": {
     "@babel/core": "^7.9.0",

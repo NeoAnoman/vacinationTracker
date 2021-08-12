@@ -8,13 +8,33 @@ export default function Display(props) {
     
     const getData = () => {
         var pin  = props.route.params.pin;
+        var district = props.route.params.district
         var date = new Date
-        if(pin) {
+        if(pin || district) {
             var day = date.getDate()
             var month = date.getMonth()
             var year = date.getFullYear()
-            day = day+1
-            month = month+1
+            var last = new Date(year, month + 1, 0)
+            if(day == last.getDate()) {
+                day = 1
+                if(month == 11) {
+                    month = 0
+                    year = year + 1
+                }
+                else {
+                    month = month+1
+                }
+            }
+            else {
+                day = day+1
+            }
+            if(month == 11) {
+                month = 0
+                year = year+1
+            }
+            else {
+                month = month+1
+            }
             if((day/10) < 1) {
                 day= '0'+day
             }
@@ -22,7 +42,12 @@ export default function Display(props) {
                 month= '0'+month
             }
             date = day+'-'+month+'-'+year
-            var api = "https://cdn-api.co-vin.in/api/v2/appointment/sessions/public/findByPin?pincode="+pin+"&date="+date
+            if(pin) {
+                var api = "https://cdn-api.co-vin.in/api/v2/appointment/sessions/public/findByPin?pincode="+pin+"&date="+date
+            }
+            else {
+                var api  = "https://cdn-api.co-vin.in/api/v2/appointment/sessions/public/findByDistrict?district_id="+district+"&date="+date
+            }
             console.log(api)
             fetch(api)
             .then((res)=> res.json())
@@ -94,7 +119,7 @@ export default function Display(props) {
     else {
         return (
             <View>
-                <Text>No Centers Availaible</Text>
+                <Text>Please wait 15 seconds to Load if still nothing happens then No Centers Availaible</Text>
             </View>
         )
     }
