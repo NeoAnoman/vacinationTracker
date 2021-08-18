@@ -241,14 +241,19 @@ export default function Home(props) {
         func();
     }, []); //replecating componentDidMount Behaviou
     return(
-        <View style={{alignItems: 'center', marginTop: 20}}>
+        <View style={{alignItems: 'center', 
+            marginTop: 20, 
+            backgroundColor: '#ABC', 
+            height: '100%'
+            }}>
             {
             showPin?
             <View style={{width: '100%', alignItems: 'center'}}>
                 <Text
                     style={{
                         textAlign: 'center',
-                        fontSize: 20
+                        fontSize: 20,
+                        color: '#fff'
                     }}
                 >
                     Enter Your Pin
@@ -260,7 +265,8 @@ export default function Home(props) {
                     borderWidth: 1, fontSize: 20,
                     marginTop: 20,
                     marginBottom: 20,
-                    borderColor: 'blue', color: 'blue'}} 
+                    borderColor: 'blue',
+                    color: '#fff'}} 
                     variant='outlined' 
                     placeholder='pin' 
                     onChangeText={text=> setPin(text)}
@@ -270,13 +276,14 @@ export default function Home(props) {
                 <Text
                     style={{
                         textAlign: 'center',
-                        fontSize: 20
+                        fontSize: 20,
+                        color: '#fff'
                     }}
                 >
                     Select your Area
                 </Text>
                 <Picker
-                    style = {{height: 100, width: '50%'}}
+                    style = {{height: 100, width: '50%', color: '#fff'}}
                     selectedValue={state}
                     onValueChange={(itemValue, itemIndex) => {
                         if(itemValue != state) {
@@ -292,7 +299,7 @@ export default function Home(props) {
                     
                 </Picker>
                 {allDistricts?<Picker
-                    style = {{height: 100, width: '50%'}}
+                    style = {{height: 100, width: '50%', color: '#fff'}}
                     selectedValue={district}
                     onValueChange={(itemValue, itemIndex) => {
                         setDistrict(itemValue)
@@ -343,7 +350,7 @@ export default function Home(props) {
                             title="Enter By Pin" />}
                     </View>
             </View>
-            <View
+            {/* <View
                 style={{
                     marginTop: 80,
                     alignItems: 'center',
@@ -372,7 +379,7 @@ export default function Home(props) {
                     title={isRegistered ? 'Unregister BackgroundFetch task' : 'Register BackgroundFetch task'}
                     onPress={toggleFetchTask}
                 />
-            </View>
+            </View> */}
         </View>
     )
 }
