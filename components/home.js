@@ -8,7 +8,7 @@ import * as BackgroundFetch from 'expo-background-fetch';
 import {Picker} from '@react-native-picker/picker';
 
 
-const BACKGROUND_FETCH_TASK = 'background-fetch';
+const BACKGROUND_FETCH_TASK = 'background-fetch2';
 
 
 const getData = async () => {
@@ -33,10 +33,10 @@ const getOldData = async () => {
                 return data;
             }
             else {
-                alert('Please enter information to check!!!')
+                return null
             }
         } catch(e) {
-            alert(e)
+            console.log(e)
         }
     }
 
@@ -44,27 +44,34 @@ const getOldData = async () => {
 // Note: This needs to be called in the global scope (e.g outside of your React components)
 const storeResults = async (props) => {
         try {
-            var value = {
-                pin: props.value
-            }
+            var value = props
             console.log(value)
             const jsonValue = JSON.stringify(value)
             await AsyncStorage.setItem('oldDetails', jsonValue)
             return 1;
         } catch (e) {
-            alert(e)
+            console.log(e)
             return 0;
         }
     }
 
 TaskManager.defineTask(BACKGROUND_FETCH_TASK, async () => {
+    // const now = Date.now();
+
+    // console.log(`Got background fetch call at date: ${new Date(now).toISOString()}`);
+
+    // // Be sure to return the successful result type!
+    // return BackgroundFetch.Result.NewData;
   try {
       console.log('background')
       var data  = await getData();
+      var date = new Date
+      var oldData = await getOldData();
       if(data.pin) {
             var day = date.getDate()
             var month = date.getMonth()
             var year = date.getFullYear()
+            var last = new Date(year, month + 1, 0)
             if(day == last.getDate()) {
                 day = 1
                 if(month == 11) {
@@ -92,27 +99,45 @@ TaskManager.defineTask(BACKGROUND_FETCH_TASK, async () => {
                 month= '0'+month
             }
             date = day+'-'+month+'-'+year;
-            if(showPin) {
+            if(data.setBackAsPin) {
                 var api = "https://cdn-api.co-vin.in/api/v2/appointment/sessions/public/findByPin?pincode="+data.pin+"&date="+date;
             }
             else {
                 var api  = "https://cdn-api.co-vin.in/api/v2/appointment/sessions/public/findByDistrict?district_id="+data.district+"&date="+date
             }
-            fetch(api)
+            console.log(api)
+            await fetch(api)
             .then((res)=> res.json())
             .then(async (data)=> {
                 console.log(data)
                 console.log('background')
+                if(oldData) {
+                    console.log('We have some old data', oldData)
+                    if(data.sessions.length > oldData.sessions.length) {
+                        console.log('new Data has more items')
+                    }
+                    else {
+                        console.log('same or equal number of items')
+                    }
+                    await storeResults(data);
+                }
+                else {
+                    console.log('Storing data');
+                    await storeResults(data);
+                }
             })
             .catch((e)=> {
                 console.log(e)
             })
+            
       }
+      console.log('background out')
       const receivedNewData = '// do your background fetch here'
       return receivedNewData ? BackgroundFetch.Result.NewData : BackgroundFetch.Result.NoData;
   } 
   catch (error) {
-    return BackgroundFetch.Result.Failed;
+      console.log(error)
+      return BackgroundFetch.Result.Failed;
   }
 });
 
@@ -145,6 +170,7 @@ export default function Home(props) {
     const checkStatusAsync = async () => {
         const status = await BackgroundFetch.getStatusAsync();
         const isRegistered = await TaskManager.isTaskRegisteredAsync(BACKGROUND_FETCH_TASK);
+        console.log('status', status);
         setStatus(status);
         setIsRegistered(isRegistered);
     };
@@ -165,8 +191,8 @@ export default function Home(props) {
         if(await storeData()) {
             console.log('I am registering')
             return BackgroundFetch.registerTaskAsync(BACKGROUND_FETCH_TASK, {
-                minimumInterval: 60 * 15, // 15 minutes after the app is in background
-                stopOnTerminate: false, // android only,
+                minimumInterval: 0.1, // 15 minutes after the app is in background
+                // stopOnTerminate: false, // android only,
                 startOnBoot: true, // android only
             });
         }
@@ -188,7 +214,8 @@ export default function Home(props) {
             try {
                 var value = {
                     pin: pin,
-                    district: district
+                    district: district,
+                    setBackAsPin: showPin?1:0
                 }
                 const jsonValue = JSON.stringify(value)
                 await AsyncStorage.setItem('details', jsonValue)
@@ -350,7 +377,7 @@ export default function Home(props) {
                             title="Enter By Pin" />}
                     </View>
             </View>
-            {/* <View
+            <View
                 style={{
                     marginTop: 80,
                     alignItems: 'center',
@@ -379,7 +406,7 @@ export default function Home(props) {
                     title={isRegistered ? 'Unregister BackgroundFetch task' : 'Register BackgroundFetch task'}
                     onPress={toggleFetchTask}
                 />
-            </View> */}
+            </View>
         </View>
     )
 }
